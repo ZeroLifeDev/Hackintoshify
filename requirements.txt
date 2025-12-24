@@ -1,1 +1,2 @@
-Pyside6
+PySide6
+WMI

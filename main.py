@@ -1,72 +1,75 @@
-from PySide6.QtWidgets import QApplication
-from GUI_Screens.MainScreen import MainScreen, SettingsScreen, ConfigureKexts, CreateEFI, HelpandGuide, RepairEFI, SelectImage, Setup
+from PySide6.QtWidgets import QApplication, QDialog
+from GUI_Screens.MainScreen import MainScreen
+from GUI_Screens.Setup import Setup
 import os
+import sys
+import json
+import configparser
 
+def get_config_paths():
+    """Returns platform-specific paths for config and setup details."""
+    if sys.platform == "win32":
+        config_dir = os.path.join(os.getenv("ProgramData"), "Hackintoshify")
+    elif sys.platform == "darwin":
+        config_dir = "/Library/Application Support/Hackintoshify"
+    else:  # Linux
+        config_dir = os.path.join(os.path.expanduser("~"), ".config", "hackintoshify")
+        
+    os.makedirs(config_dir, exist_ok=True)
+    
+    return {
+        "config": os.path.join(config_dir, "config.ini"),
+        "setup_details": os.path.join(config_dir, "setup_details.json")
+    }
 
-configuration_path_windows = "C:/ProgramData/Hackintoshify/config.ini"
-SetupDetailsPathWindows = "C:/ProgramData/Hackintoshify/setup_details.json"
-configuration_path_linux = "/etc/hackintoshify/config.ini"
-SetupDetailsPathLinux = "/etc/hackintoshify/setup_details.json"
-configuration_path_mac = "/Library/Application Support/Hackintoshify/config.ini"        # will be last because macOS is anoying.
-SetupDetailsPathMac = "/Library/Application Support/Hackintoshify/setup_details.json"   # will be last because macOS is anoying.
+def initialize_files():
+    """Creates config and setup files if they don't exist."""
+    paths = get_config_paths()
+    config_path = paths["config"]
+    setup_details_path = paths["setup_details"]
 
+    if not os.path.exists(config_path):
+        config = configparser.ConfigParser()
+        config['Settings'] = {'theme': 'Dark', 'verbose_logging': 'False'}
+        with open(config_path, 'w') as f:
+            config.write(f)
 
-# If files dont exist then create them
-if not os.path.exists(configuration_path_windows):
-    with open(configuration_path_windows, 'w') as f:
-        f.write("[Settings]\ntheme=Dark\nverbose_logging=False\n")
-        f.close()
+    if not os.path.exists(setup_details_path):
+        with open(setup_details_path, 'w') as f:
+            json.dump({}, f)
 
-if not os.path.exists(SetupDetailsPathWindows):
-    with open(SetupDetailsPathWindows, 'w') as f:
-        f.write("{}")
-        f.close()
-
-if not os.path.exists(configuration_path_linux):
-    with open(configuration_path_linux, 'w') as f:
-        f.write("[Settings]\ntheme=Dark\nverbose_logging=False\n")
-        f.close()
-
-if not os.path.exists(SetupDetailsPathLinux):
-    with open(SetupDetailsPathLinux, 'w') as f:
-        f.write("{}")
-        f.close()
-
-if not os.path.exists(configuration_path_mac):
-    with open(configuration_path_mac, 'w') as f:
-        f.write("[Settings]\ntheme=Dark\nverbose_logging=False\n")
-        f.close()
-
-if not os.path.exists(SetupDetailsPathMac):
-    with open(SetupDetailsPathMac, 'w') as f:
-        f.write("{}")
-        f.close()
-
-
-# If its users first time then open setup screen
-def check_if_first_time():
-    first_time = False
-    if os.path.exists(SetupDetailsPathWindows):
-        if os.path.getsize(SetupDetailsPathWindows) == 0:
-            first_time = True
-    elif os.path.exists(SetupDetailsPathLinux):
-        if os.path.getsize(SetupDetailsPathLinux) == 0:
-            first_time = True
-    elif os.path.exists(SetupDetailsPathMac):
-        if os.path.getsize(SetupDetailsPathMac) == 0:
-            first_time = True
-    return first_time
-
+def is_first_time():
+    """Checks if the setup has been completed."""
+    setup_details_path = get_config_paths()["setup_details"]
+    if not os.path.exists(setup_details_path):
+        return True
+        
+    with open(setup_details_path, 'r') as f:
+        try:
+            details = json.load(f)
+            return not details.get("setup_complete", False)
+        except (json.JSONDecodeError, AttributeError):
+            return True
 
 if __name__ == "__main__":
-    app = QApplication([])
+    app = QApplication(sys.argv)
+    
+    initialize_files()
 
-    main_screen = MainScreen()
-
-    if check_if_first_time():
-        setup_screen = Setup(parent=main_screen)
-        setup_screen.show()
+    if is_first_time():
+        setup_screen = Setup()
+        # The exec() method shows the dialog modally.
+        result = setup_screen.exec()
+        
+        # QDialog.Accepted means the user saved the setup.
+        if result == QDialog.Accepted:
+            main_screen = MainScreen()
+            main_screen.show()
+            sys.exit(app.exec())
+        else:
+            # If the user closes the setup dialog without saving, exit the app.
+            sys.exit(0)
     else:
+        main_screen = MainScreen()
         main_screen.show()
-
-    app.exec()
+        sys.exit(app.exec())
