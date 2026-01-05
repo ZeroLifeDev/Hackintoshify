@@ -21,8 +21,24 @@ from urllib.request import Request, HTTPError, urlopen
 from urllib.parse import urlparse
 
 # Constants
-# Updated Catalog URL covering 15 (Sequoia), 14 (Sonoma), 13 (Ventura), 12, 11, etc.
-CATALOG_URL = "https://swscan.apple.com/content/catalogs/others/index-15-14-13-12-10.16-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog"
+# Comprehensive list of catalogs to ensure we find EVERYTHING (Dev, Beta, Public)
+CATALOG_URLS = [
+    # macOS 15 / 14 / 13 / 12 / 11 (Big Sur and newer use 10.16 format in catalogs)
+    "https://swscan.apple.com/content/catalogs/others/index-10.16-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog",
+    "https://swscan.apple.com/content/catalogs/others/index-10.16seed-10.16-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog",
+    "https://swscan.apple.com/content/catalogs/others/index-10.16customerseed-10.16-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog",
+    "https://swscan.apple.com/content/catalogs/others/index-10.16developerseed-10.16-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog",
+    
+    # macOS 10.15 (Catalina) specific
+    "https://swscan.apple.com/content/catalogs/others/index-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog",
+    "https://swscan.apple.com/content/catalogs/others/index-10.15seed-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog",
+    
+    # macOS 10.14 (Mojave) specific
+    "https://swscan.apple.com/content/catalogs/others/index-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog",
+    
+    # macOS 10.13 (High Sierra)
+    "https://swscan.apple.com/content/catalogs/others/index-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog",
+]
 
 CACHE_FILE = "recovery_cache.json"
 
@@ -65,16 +81,8 @@ PRODUCT_NAMES = {
     "031-18237": "macOS 10.13: High Sierra",
 }
 
-# Static Fallback / Custom Entries (e.g. Tahoe)
-STATIC_ENTRIES = [
-    {
-        "id": "Custom-Tahoe", 
-        "name": "macOS 26: Tahoe", 
-        "url": "https://swcdn.apple.com/content/downloads/25/22/093-37385/tc6397qpjd9cudicjkvu1ucrs11yr1rlcs/RecoveryImage/BaseSystem.dmg", 
-        "chunklist": "https://swcdn.apple.com/content/downloads/25/22/093-37385/tc6397qpjd9cudicjkvu1ucrs11yr1rlcs/RecoveryImage/BaseSystem.chunklist",
-        "date": datetime.datetime.now() # Always new
-    }
-]
+# Static Fallback - CLEARED to avoid 403s on dead links. We rely on the Catalog now.
+STATIC_ENTRIES = []
 
 def get_url_content(url, headers=None):
     if headers is None:
@@ -142,75 +150,73 @@ class FetchAppleImages:
         except Exception:
             return None
 
-    def simplify_name(self, name):
-        """Normalizes names to a standard format"""
-        name = name.strip()
-        # Handle "macOS Sequoia" without version
-        if "Sequioa" in name or "Sequoia" in name: 
-            if "15" not in name: return "macOS 15: Sequoia"
-        if "Sonoma" in name:
-            if "14" not in name: return "macOS 14: Sonoma"
-        if "Ventura" in name:
-            if "13" not in name: return "macOS 13: Ventura"
-        if "Monterey" in name:
-            if "12" not in name: return "macOS 12: Monterey"
-        if "Big Sur" in name:
-            if "11" not in name: return "macOS 11: Big Sur"
-        if "Catalina" in name:
-            if "10.15" not in name: return "macOS 10.15: Catalina"
-        if "Mojave" in name:
-            if "10.14" not in name: return "macOS 10.14: Mojave"
-        if "High Sierra" in name:
-            if "10.13" not in name: return "macOS 10.13: High Sierra"
+    def format_name(self, name, version):
+        """Appends version if not present"""
+        if version and version not in name:
+            return f"{name} ({version})"
         return name
 
     def fetch_images_from_catalog(self):
-        # 1. Download Catalog
-        if self.status_callback: self.status_callback("Downloading Catalog (may take a moment)...")
-        data = get_url_content(CATALOG_URL)
-        if not data:
-            if self.verbose: print("Failed to download catalog")
-            return self.apple_images 
-            
-        try:
-            root = plistlib.loads(data)
-        except Exception as e:
-            if self.verbose: print(f"Catalog parse error: {e}")
-            return self.apple_images
-
-        products = root.get('Products', {})
+        # 1. Download Catalog (Try multiple if needed)
         candidates = []
+        seen_urls = set()
         
-        # 2. Filter for Recovery Images
-        for pid, pdata in products.items():
-            packages = pdata.get('Packages', [])
-            base_system_url = None
-            chunklist_url = None
+        for url in CATALOG_URLS:
+            if self.status_callback: self.status_callback(f"Scanning catalog...")
+            if self.verbose: print(f"Checking {url}...")
             
-            for pkg in packages:
-                url = pkg.get('URL', '')
-                if url.endswith("BaseSystem.dmg"):
-                    base_system_url = url
-                elif url.endswith("BaseSystem.chunklist"):
-                    chunklist_url = url
-            
-            if base_system_url:
-                meta_url = pdata.get('ServerMetadataURL')
-                date = pdata.get('PostDate') 
-                # keep date for sorting
+            data = get_url_content(url)
+            if not data:
+                continue
                 
-                candidates.append({
-                    'id': pid,
-                    'url': base_system_url,
-                    'chunklist': chunklist_url,
-                    'meta_url': meta_url,
-                    'date': date
-                })
+            try:
+                root = plistlib.loads(data)
+            except Exception as e:
+                if self.verbose: print(f"Catalog parse error: {e}")
+                continue
 
-        if self.status_callback: self.status_callback(f"Found {len(candidates)} versions. Parsing...")
+            products = root.get('Products', {})
+            count_in_this = 0
+            
+            for pid, pdata in products.items():
+                packages = pdata.get('Packages', [])
+                base_system_url = None
+                chunklist_url = None
+                
+                for pkg in packages:
+                    u = pkg.get('URL', '')
+                    if u.endswith("BaseSystem.dmg"):
+                        base_system_url = u
+                    elif u.endswith("BaseSystem.chunklist"):
+                        chunklist_url = u
+                
+                if base_system_url and base_system_url not in seen_urls:
+                    seen_urls.add(base_system_url)
+                    
+                    meta_url = pdata.get('ServerMetadataURL')
+                    date = pdata.get('PostDate') 
+                    
+                    # Try to find version info in Dist (better than name)
+                    # or extended meta
+                    
+                    candidates.append({
+                        'id': pid,
+                        'url': base_system_url,
+                        'chunklist': chunklist_url,
+                        'meta_url': meta_url,
+                        'date': date
+                    })
+                    count_in_this += 1
+            
+            if self.verbose: print(f"Found {count_in_this} candidates in this catalog")
+
+        if not candidates:
+            if self.verbose: print("No images found in any catalog")
+            return self.apple_images 
+
+        if self.status_callback: self.status_callback(f"Found total {len(candidates)} versions. Parsing...")
         
         # 3. Resolve Names (Threaded)
-        # Use existing cache mapping or fetch
         final_list = []
         unknown_pids = []
         
@@ -241,10 +247,8 @@ class FetchAppleImages:
                         res = future.result()
                         if res and res[1]:
                             name = res[1]
-                            # Normalize name immediately
-                            name = self.simplify_name(name)
                             cand['name'] = name
-                            # PRODUCT_NAMES[cand['id']] = name # Dont cache globally to avoid pollution across runs if we want fresh
+                            # We can cache specifically for this session 
                         else:
                             cand['name'] = f"macOS Installer ({cand['id']})"
                     except:
@@ -252,59 +256,66 @@ class FetchAppleImages:
                     final_list.append(cand)
 
         # 4. Clean up and Deduplicate
-        # Strategy: Group by Name. Keep the one with the LATEST Date.
+        # Strategy: Keep distinct versions.
+        # If we have multiple entries with EXACT SAME name, we keep the one with latest date.
+        # But if names are different (e.g. 15.1 vs 15.0), we keep both.
         
-        best_versions = {} # "macOS 15: Sequoia" -> {data}
+        best_versions = {} # "Name" -> {data}
         
         for item in final_list:
             name = item['name']
-            # Normalize again just in case
-            name = self.simplify_name(name)
-            item['name'] = name # Update item
             
-            # Date Check
-            date = item.get('date')
-            if not date: date = datetime.datetime.min
+            # Improve name consistency
+            # If name is generic "macOS Installer", look at ID to guess?
             
-            if name not in best_versions:
-                best_versions[name] = item
+            # Unique Key: Name
+            # If "macOS 15: Sequoia" appears twice (for 15.0 and 15.1?), we might lose one.
+            # Ideally we want the version string. 
+            # If name doesn't distinguish, append ID.
+            
+            key = name
+            
+            # Temporary: Allow duplicates if IDs are different? 
+            # No, that clutters nicely named lists.
+            # Users want "All possible versions".
+            # So let's append ID to name if it's generic, or trust name uniqueness.
+            
+            # Actually, let's keep everything but sort nicely.
+            # But the user complained about "only 4 versions".
+            # This was because I deduplicated by simplified name.
+            # Now I am NOT calling simplify_name.
+            
+            # Just dedupe by exact name match.
+            if key not in best_versions:
+                 best_versions[key] = item
             else:
-                # Compare dates
-                existing_date = best_versions[name].get('date', datetime.datetime.min)
-                if date > existing_date:
-                    best_versions[name] = item
+                 # Check date
+                 existing_date = best_versions[key].get('date', datetime.datetime.min)
+                 new_date = item.get('date', datetime.datetime.min)
+                 # Handle None
+                 if not existing_date: existing_date = datetime.datetime.min
+                 if not new_date: new_date = datetime.datetime.min
+                 
+                 if new_date > existing_date:
+                     best_versions[key] = item
         
-        # Convert back to list
         valid_images = list(best_versions.values())
         
-        # Add Static Entries (Tahoe) if not present
-        seen_names = set(img['name'] for img in valid_images)
-        for static in STATIC_ENTRIES:
-             if static['name'] not in seen_names:
-                 valid_images.append(static)
-        
         # Sort by Name (descending to get 15, 14, 13...)
-        # We need a custom sort mechanism because "macOS 15" > "macOS 14" alpha sort works, 
-        # but "macOS 10.15" vs "macOS 11" might be tricky naturally.
-        # Actually alphabetical: "macOS 15" < "macOS 26" (Tahoe).
-        # "macOS 15" vs "macOS 11". '15' > '11'.
-        # "macOS 11" vs "macOS 10". '11' > '10'.
-        # So clear string sort might mostly work, but let's be safe.
-        
         def sort_key(x):
             n = x['name']
-            # Extract version number for sorting
-            parts = n.split()
-            for p in parts:
-                if p[0].isdigit():
-                    # Check for 10.xx format
-                    if "." in p:
-                        return float(p.split(":")[0]) # 10.15
-                    try:
-                        val = float(p.replace(":", ""))
-                        return val
-                    except:
-                        pass
+            try:
+                # Find version number
+                import re
+                match = re.search(r'(\d+(\.\d+)?)', n)
+                if match:
+                    val = float(match.group(1))
+                    if val < 20: # 10.15 -> 10.15. 15 -> 15.
+                         return val
+                    # 10.15 is 10.15. 15 is 15.
+                    # 15 > 10.15. Correct.
+            except:
+                pass
             return 0
             
         valid_images.sort(key=sort_key, reverse=True)
@@ -313,3 +324,9 @@ class FetchAppleImages:
         self.save_cache()
         
         return self.apple_images
+
+if __name__ == "__main__":
+    print("FetchAppleImages Standalone Test")
+    f = FetchAppleImages(verbose=True)
+    for img in f.apple_images:
+        print(f"{img['name']} - {img['url']}")

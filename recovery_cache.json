@@ -1,33 +1,50 @@
 [
     {
-        "id": "Custom-Tahoe",
-        "name": "macOS 26: Tahoe",
-        "url": "https://swcdn.apple.com/content/downloads/25/22/093-37385/tc6397qpjd9cudicjkvu1ucrs11yr1rlcs/RecoveryImage/BaseSystem.dmg",
-        "chunklist": "https://swcdn.apple.com/content/downloads/25/22/093-37385/tc6397qpjd9cudicjkvu1ucrs11yr1rlcs/RecoveryImage/BaseSystem.chunklist",
-        "date": "2026-01-05 17:22:44.775844"
-    },
-    {
-        "id": "001-68446",
-        "url": "https://swcdn.apple.com/content/downloads/26/37/001-68446/r1dbqtmf3mtpikjnd04cq31p4jk91dceh8/BaseSystem.dmg",
-        "chunklist": "https://swcdn.apple.com/content/downloads/26/37/001-68446/r1dbqtmf3mtpikjnd04cq31p4jk91dceh8/BaseSystem.chunklist",
-        "meta_url": "https://swcdn.apple.com/content/downloads/26/37/001-68446/r1dbqtmf3mtpikjnd04cq31p4jk91dceh8/InstallAssistantAuto.smd",
-        "date": "2020-11-11 17:48:09",
+        "id": "041-88800",
+        "url": "http://swcdn.apple.com/content/downloads/34/54/041-88800-A_HLMBDM42FL/anrmoj880qkj0lbybqm0c3830p70nawjrv/BaseSystem.dmg",
+        "chunklist": "http://swcdn.apple.com/content/downloads/34/54/041-88800-A_HLMBDM42FL/anrmoj880qkj0lbybqm0c3830p70nawjrv/BaseSystem.chunklist",
+        "meta_url": "http://swcdn.apple.com/content/downloads/34/54/041-88800-A_HLMBDM42FL/anrmoj880qkj0lbybqm0c3830p70nawjrv/InstallAssistantAuto.smd",
+        "date": "2019-10-23 14:41:18",
         "name": "macOS 10.15: Catalina"
     },
     {
         "id": "061-86291",
-        "url": "https://swcdn.apple.com/content/downloads/01/28/061-86291-A_JPEIWIOZES/enpozvvbmj3mj2dhulhevlt8b429qd5kw0/BaseSystem.dmg",
-        "chunklist": "https://swcdn.apple.com/content/downloads/01/28/061-86291-A_JPEIWIOZES/enpozvvbmj3mj2dhulhevlt8b429qd5kw0/BaseSystem.chunklist",
-        "meta_url": "https://swcdn.apple.com/content/downloads/01/28/061-86291-A_JPEIWIOZES/enpozvvbmj3mj2dhulhevlt8b429qd5kw0/InstallAssistantAuto.smd",
+        "url": "http://swcdn.apple.com/content/downloads/01/28/061-86291-A_JPEIWIOZES/enpozvvbmj3mj2dhulhevlt8b429qd5kw0/BaseSystem.dmg",
+        "chunklist": "http://swcdn.apple.com/content/downloads/01/28/061-86291-A_JPEIWIOZES/enpozvvbmj3mj2dhulhevlt8b429qd5kw0/BaseSystem.chunklist",
+        "meta_url": "http://swcdn.apple.com/content/downloads/01/28/061-86291-A_JPEIWIOZES/enpozvvbmj3mj2dhulhevlt8b429qd5kw0/InstallAssistantAuto.smd",
         "date": "2020-03-23 21:41:00",
         "name": "macOS 10.14: Mojave"
     },
     {
         "id": "041-90855",
-        "url": "https://swcdn.apple.com/content/downloads/08/44/041-90855-A_452WLVQACP/mzfvoi59bljh3w4w4lvwenfk0r1a2f7212/BaseSystem.dmg",
-        "chunklist": "https://swcdn.apple.com/content/downloads/08/44/041-90855-A_452WLVQACP/mzfvoi59bljh3w4w4lvwenfk0r1a2f7212/BaseSystem.chunklist",
-        "meta_url": "https://swcdn.apple.com/content/downloads/08/44/041-90855-A_452WLVQACP/mzfvoi59bljh3w4w4lvwenfk0r1a2f7212/InstallAssistantAuto.smd",
+        "url": "http://swcdn.apple.com/content/downloads/08/44/041-90855-A_452WLVQACP/mzfvoi59bljh3w4w4lvwenfk0r1a2f7212/BaseSystem.dmg",
+        "chunklist": "http://swcdn.apple.com/content/downloads/08/44/041-90855-A_452WLVQACP/mzfvoi59bljh3w4w4lvwenfk0r1a2f7212/BaseSystem.chunklist",
+        "meta_url": "http://swcdn.apple.com/content/downloads/08/44/041-90855-A_452WLVQACP/mzfvoi59bljh3w4w4lvwenfk0r1a2f7212/InstallAssistantAuto.smd",
         "date": "2019-10-23 14:41:18",
         "name": "macOS 10.13: High Sierra"
+    },
+    {
+        "id": "001-68446",
+        "url": "http://swcdn.apple.com/content/downloads/26/37/001-68446/r1dbqtmf3mtpikjnd04cq31p4jk91dceh8/BaseSystem.dmg",
+        "chunklist": "http://swcdn.apple.com/content/downloads/26/37/001-68446/r1dbqtmf3mtpikjnd04cq31p4jk91dceh8/BaseSystem.chunklist",
+        "meta_url": "http://swcdn.apple.com/content/downloads/26/37/001-68446/r1dbqtmf3mtpikjnd04cq31p4jk91dceh8/InstallAssistantAuto.smd",
+        "date": "2020-11-11 17:48:09",
+        "name": "macOS Catalina"
+    },
+    {
+        "id": "061-26578",
+        "url": "http://swcdn.apple.com/content/downloads/41/23/061-26578-A_FF0C6M87LS/ylvl0phx6uy3i444qt9p57n8wz0xnylmd9/BaseSystem.dmg",
+        "chunklist": "http://swcdn.apple.com/content/downloads/41/23/061-26578-A_FF0C6M87LS/ylvl0phx6uy3i444qt9p57n8wz0xnylmd9/BaseSystem.chunklist",
+        "meta_url": "http://swcdn.apple.com/content/downloads/41/23/061-26578-A_FF0C6M87LS/ylvl0phx6uy3i444qt9p57n8wz0xnylmd9/InstallAssistantAuto.smd",
+        "date": "2019-10-14 20:38:26",
+        "name": "macOS Mojave"
+    },
+    {
+        "id": "041-91741",
+        "url": "http://swcdn.apple.com/content/downloads/41/43/041-91741-A_WA3NXS2ZKX/64427gwv708ya1dixzjp5smau1qzm4acsa/BaseSystem.dmg",
+        "chunklist": "http://swcdn.apple.com/content/downloads/41/43/041-91741-A_WA3NXS2ZKX/64427gwv708ya1dixzjp5smau1qzm4acsa/BaseSystem.chunklist",
+        "meta_url": "http://swcdn.apple.com/content/downloads/41/43/041-91741-A_WA3NXS2ZKX/64427gwv708ya1dixzjp5smau1qzm4acsa/InstallAssistantAuto.smd",
+        "date": "2019-10-13 02:41:35",
+        "name": "macOS High Sierra"
     }
 ]
