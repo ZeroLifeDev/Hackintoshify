@@ -48,6 +48,10 @@ class DownloadWorker(QObject):
                 if 'content-length' in head.headers:
                     self.total_size = int(head.headers.get('content-length'))
             
+            # Force HTTPS
+            if self.url.startswith('http://'):
+                self.url = self.url.replace('http://', 'https://', 1)
+
             headers = {
                 'User-Agent': 'InternetRecovery/1.0'
             }
