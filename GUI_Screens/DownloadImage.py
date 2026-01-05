@@ -166,7 +166,9 @@ class DownloadItemWidget(QFrame):
     
     def on_error(self, err):
         self.lbl_status.setText(f"Error: {err}")
+        self.lbl_status.setToolTip(str(err)) # Show full error on hover
         self.lbl_status.setStyleSheet("color: #ef4444;")
+        print(f"Dataset UI Error: {err}") # Ensure printed to console
 
     def toggle_pause(self):
         if self.is_paused:
@@ -205,6 +207,12 @@ class DownloadImageScreen(QWidget):
         self.start_fetch()
         
         self.apply_theme("Dark") 
+
+    def closeEvent(self, event):
+        if hasattr(self, 'fetch_worker') and self.fetch_worker.isRunning():
+            self.fetch_worker.quit()
+            self.fetch_worker.wait()
+        super().closeEvent(event)
 
     def resizeEvent(self, event):
         self.loading_overlay.resize(self.size())

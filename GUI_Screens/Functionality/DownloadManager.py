@@ -42,11 +42,18 @@ class DownloadWorker(QObject):
         self.status_changed.emit("Downloading")
         
         try:
-            # Check total size if possible (HEAD request)
+            # Suppress SSL warnings globally for this worker
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+            # Check total size if possible (HEAD request) - MUST use verify=False
             if self.total_size == 0:
-                head = requests.head(self.url, allow_redirects=True)
-                if 'content-length' in head.headers:
-                    self.total_size = int(head.headers.get('content-length'))
+                try:
+                    head = requests.head(self.url, allow_redirects=True, verify=False, timeout=10)
+                    if 'content-length' in head.headers:
+                        self.total_size = int(head.headers.get('content-length'))
+                except:
+                    pass # HEAD failed, ignore and rely on GET
             
             # Force HTTPS
             if self.url.startswith('http://'):
@@ -60,7 +67,7 @@ class DownloadWorker(QObject):
                 headers['Range'] = f"bytes={self.downloaded_size}-"
                 mode = 'ab' # Append
                 
-            response = requests.get(self.url, headers=headers, stream=True, timeout=30)
+            response = requests.get(self.url, headers=headers, stream=True, timeout=30, verify=False)
             response.raise_for_status()
             
             # If server doesn't support range, it sends 200 instead of 206
@@ -115,6 +122,7 @@ class DownloadWorker(QObject):
             self.is_running = False
 
         except Exception as e:
+            print(f"Download Worker Error: {e}")
             self.status_changed.emit("Error")
             self.error.emit(str(e))
             self.is_running = False
