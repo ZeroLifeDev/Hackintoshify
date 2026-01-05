@@ -18,7 +18,7 @@ except ImportError:
 # ---------------------------------------------------------
 PRODUCT_NAMES = {
     # Sequoia (15)
-    "089-70987": "macOS 15: Sequoia (2025)", # Validated from search logic
+    "089-70987": "macOS 15: Sequoia (2025)", 
     "093-99065": "macOS 15: Sequoia",
     "093-52107": "macOS 15: Sequoia",
     "093-34000": "macOS 15: Sequoia",
@@ -81,7 +81,6 @@ def get_url_content(url, headers=None):
 def generate_catalog_urls():
     urls = []
     # Scan from 26 (Tahoe) down to 11 (Big Sur)
-    # 10.16 is legacy Big Sur ID
     versions = range(26, 10, -1) 
     types = ["seed", "beta", "customerseed", ""]
     
@@ -94,7 +93,6 @@ def generate_catalog_urls():
             url = f"https://swscan.apple.com/content/catalogs/others/index-{v}{t}-{chain}{legacy_suffix}"
             urls.append(url)
             
-    # Add explicit legacy catalogs 
     urls.append("https://swscan.apple.com/content/catalogs/others/index-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog")
     urls.append("https://swscan.apple.com/content/catalogs/others/index-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog")
     urls.append("https://swscan.apple.com/content/catalogs/others/index-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog")
@@ -106,7 +104,6 @@ CATALOG_URLS = generate_catalog_urls()
 class FetchAppleImages:
     def __init__(self, verbose=False, use_cache=True, status_callback=None):
         self.verbose = verbose
-        # Force false initially to populate
         self.use_cache = use_cache
         self.status_callback = status_callback
         self.apple_images = []
@@ -122,6 +119,9 @@ class FetchAppleImages:
                 self.fetch_images_from_catalog()
             except Exception as e:
                 pass
+        
+        # Always sort at the end
+        self.sort_images()
 
     def load_cache(self):
         if os.path.exists(CACHE_FILE):
@@ -140,28 +140,51 @@ class FetchAppleImages:
         except:
             pass
 
+    def sort_images(self):
+        def parse_date(x):
+            d = x.get('date')
+            if isinstance(d, datetime.datetime): return d
+            if isinstance(d, str):
+                try: return datetime.datetime.strptime(d, "%Y-%m-%d %H:%M:%S")
+                except: 
+                    try: return datetime.datetime.strptime(d, "%Y-%m-%d")
+                    except: pass
+            return datetime.datetime.min
+
+        def get_version_score(item):
+            name = item.get('name', '').lower()
+            if "tahoe" in name or "16." in name or "macos 16" in name: return 16
+            if "sequoia" in name or "15." in name or "macos 15" in name: return 15
+            if "sonoma" in name or "14." in name or "macos 14" in name: return 14
+            if "ventura" in name or "13." in name or "macos 13" in name: return 13
+            if "monterey" in name or "12." in name or "macos 12" in name: return 12
+            if "big sur" in name or "11." in name or "macos 11" in name: return 11
+            if "catalina" in name or "10.15" in name: return 10.15
+            if "mojave" in name or "10.14" in name: return 10.14
+            if "high sierra" in name or "10.13" in name: return 10.13
+            return 0
+
+        # Sort primarily by Version Score (Descending), then by Date (Descending)
+        self.apple_images.sort(key=lambda x: (get_version_score(x), parse_date(x)), reverse=True)
+
     def get_product_name(self, pid, distributions, server_metadata_url):
-        # 1. Check Static Map
         if pid in PRODUCT_NAMES:
             return PRODUCT_NAMES[pid]
 
         name = None
         dist_url = distributions.get('English') or distributions.get('en')
         
-        # 2. Try Dist file with smarter parsing
         if dist_url:
             try:
                 content = get_url_content(dist_url)
                 if content:
                     text = content.decode('utf-8', errors='ignore')
-                    # Look for explicit Title
                     m = re.search(r'<title>(.*?)</title>', text, re.IGNORECASE)
                     if m:
                         candidate = m.group(1).strip()
                         if candidate and candidate != "SU_TITLE":
                             name = candidate
                     
-                    # If SU_TITLE found or no title, try Heuristics from pkg-refs
                     if not name or name == "SU_TITLE":
                         if "macOSSequoia" in text or "macOS Sequoia" in text:
                             name = "macOS 15: Sequoia"
@@ -178,7 +201,6 @@ class FetchAppleImages:
         
         if name: return name
 
-        # 3. Try ServerMetadata
         if server_metadata_url:
             try:
                 data = get_url_content(server_metadata_url)
@@ -201,8 +223,6 @@ class FetchAppleImages:
         raw_candidates = []
         
         total_catalogs = len(CATALOG_URLS)
-        # Limit scanning to first 20 most relevant catalogs to save time if successful? 
-        # No, user wants everything.
         
         for idx, url in enumerate(CATALOG_URLS):
             if self.status_callback: 
@@ -280,7 +300,6 @@ class FetchAppleImages:
                 except:
                     c['name'] = f"macOS Installer ({c['id']})"
                 
-                # If name is still SU_TITLE, try to guess from ID one last time or Generic
                 if c['name'] == "SU_TITLE":
                      c['name'] = f"macOS Installer ({c['id']})"
                      
@@ -290,7 +309,6 @@ class FetchAppleImages:
         for item in final_list:
             name = item['name']
             
-            # Additional cleanup
             if name == "SU_TITLE": name = f"macOS Installer ({item['id']})"
 
             if item.get('full_installer'):
@@ -306,14 +324,6 @@ class FetchAppleImages:
             item['name'] = name
             formatted.append(item)
             
-        def sort_key(x):
-            d = x.get('date')
-            if not d: return datetime.datetime.min
-            if isinstance(d, datetime.datetime): return d
-            return datetime.datetime.min
-
-        formatted.sort(key=sort_key, reverse=True)
-        
         self.apple_images = formatted
         self.save_cache()
 

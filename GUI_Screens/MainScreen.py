@@ -145,6 +145,18 @@ class MainScreen(QWidget):
         
         self._build_ui()
         self.apply_theme(self.current_theme)
+        
+        # Persistent subsystems
+        self.download_window = None
+
+    def closeEvent(self, event):
+        # Ensure we save download state if exists
+        try:
+            if self.download_window and hasattr(self.download_window, 'manager'):
+                self.download_window.manager.save_state()
+        except:
+            pass
+        super().closeEvent(event)
 
     def _build_ui(self):
         self.main_layout = QVBoxLayout(self)
@@ -207,8 +219,8 @@ class MainScreen(QWidget):
         grid.setContentsMargins(0, 10, 0, 10)
         
         self.cards_data = [
-            ("Create Installer", "Download macOS and create a bootable USB drive.", "🚀", self.create_installer),
-            ("Select Image", "Use a pre-downloaded macOS image file.", "💿", self.select_image),
+            ("Select macOS Image", "Download or select a macOS image.", "🚀", self.create_installer),
+            ("Select Image (Manual)", "Use a pre-downloaded macOS image file manually.", "💿", self.select_image),
             ("Create & Select EFI", "Verify and install an existing EFI configuration.", "⚙️", self.select_efi),
             ("Help & Guides", "Documentation and troubleshooting steps.", "❓", self.open_help),
         ]
@@ -287,14 +299,35 @@ class MainScreen(QWidget):
     # Actions
     def create_installer(self):
         try:
-            from .DownloadImage import DownloadImageScreen
-            self.download_window = DownloadImageScreen(parent=self)
-            # Pass current theme
-            self.download_window.apply_theme(self.current_theme)
-            self.download_window.setWindowModality(Qt.ApplicationModal)
+                from .DownloadImage import DownloadImageScreen
+                self.download_window = DownloadImageScreen(parent=self)
+                # Pass current theme
+                self.download_window.apply_theme(self.current_theme)
+                
+                # Connect Signal
+                self.download_window.image_selected.connect(self.on_image_selected)
+            
+            # Show non-modally so user can use other parts of app if desired, 
+            # and so it stays alive when "closed" (hidden)
             self.download_window.show()
+            self.download_window.raise_()
+            self.download_window.activateWindow()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to open downloader: {e}")
+            
+    def on_image_selected(self, name, path):
+        # Update the first card's description or create a visual indicator
+        # We need to access the card. Since we created them in a loop, we can find it.
+        # But finding by object name is tricky if we didn't set specific ones.
+        # Storing references would be better, but we can iterate.
+        
+        children = self.findChildren(QFrame, "ActionCard")
+        # We know it's the first one logic-wise, or match by title "Select macOS Image"
+        for card in children:
+            if card.title_label.text() == "Select macOS Image":
+                card.desc_label.setText(f"Selected: {name}")
+                card.desc_label.setStyleSheet("color: #22c55e;") # Green
+                break
     
     def select_image(self):
         QMessageBox.information(self, "Select Image", "Opening image selector...")
