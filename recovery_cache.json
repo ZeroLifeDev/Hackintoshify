@@ -1,0 +1,33 @@
+[
+    {
+        "id": "Custom-Tahoe",
+        "name": "macOS 26: Tahoe",
+        "url": "https://swcdn.apple.com/content/downloads/25/22/093-37385/tc6397qpjd9cudicjkvu1ucrs11yr1rlcs/RecoveryImage/BaseSystem.dmg",
+        "chunklist": "https://swcdn.apple.com/content/downloads/25/22/093-37385/tc6397qpjd9cudicjkvu1ucrs11yr1rlcs/RecoveryImage/BaseSystem.chunklist",
+        "date": "2026-01-05 17:22:44.775844"
+    },
+    {
+        "id": "001-68446",
+        "url": "https://swcdn.apple.com/content/downloads/26/37/001-68446/r1dbqtmf3mtpikjnd04cq31p4jk91dceh8/BaseSystem.dmg",
+        "chunklist": "https://swcdn.apple.com/content/downloads/26/37/001-68446/r1dbqtmf3mtpikjnd04cq31p4jk91dceh8/BaseSystem.chunklist",
+        "meta_url": "https://swcdn.apple.com/content/downloads/26/37/001-68446/r1dbqtmf3mtpikjnd04cq31p4jk91dceh8/InstallAssistantAuto.smd",
+        "date": "2020-11-11 17:48:09",
+        "name": "macOS 10.15: Catalina"
+    },
+    {
+        "id": "061-86291",
+        "url": "https://swcdn.apple.com/content/downloads/01/28/061-86291-A_JPEIWIOZES/enpozvvbmj3mj2dhulhevlt8b429qd5kw0/BaseSystem.dmg",
+        "chunklist": "https://swcdn.apple.com/content/downloads/01/28/061-86291-A_JPEIWIOZES/enpozvvbmj3mj2dhulhevlt8b429qd5kw0/BaseSystem.chunklist",
+        "meta_url": "https://swcdn.apple.com/content/downloads/01/28/061-86291-A_JPEIWIOZES/enpozvvbmj3mj2dhulhevlt8b429qd5kw0/InstallAssistantAuto.smd",
+        "date": "2020-03-23 21:41:00",
+        "name": "macOS 10.14: Mojave"
+    },
+    {
+        "id": "041-90855",
+        "url": "https://swcdn.apple.com/content/downloads/08/44/041-90855-A_452WLVQACP/mzfvoi59bljh3w4w4lvwenfk0r1a2f7212/BaseSystem.dmg",
+        "chunklist": "https://swcdn.apple.com/content/downloads/08/44/041-90855-A_452WLVQACP/mzfvoi59bljh3w4w4lvwenfk0r1a2f7212/BaseSystem.chunklist",
+        "meta_url": "https://swcdn.apple.com/content/downloads/08/44/041-90855-A_452WLVQACP/mzfvoi59bljh3w4w4lvwenfk0r1a2f7212/InstallAssistantAuto.smd",
+        "date": "2019-10-23 14:41:18",
+        "name": "macOS 10.13: High Sierra"
+    }
+]

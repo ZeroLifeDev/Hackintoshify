@@ -69,7 +69,7 @@ PRODUCT_NAMES = {
 STATIC_ENTRIES = [
     {
         "id": "Custom-Tahoe", 
-        "name": "macOS 16: Tahoe (Beta/Preview)", 
+        "name": "macOS 26: Tahoe", 
         "url": "https://swcdn.apple.com/content/downloads/25/22/093-37385/tc6397qpjd9cudicjkvu1ucrs11yr1rlcs/RecoveryImage/BaseSystem.dmg", 
         "chunklist": "https://swcdn.apple.com/content/downloads/25/22/093-37385/tc6397qpjd9cudicjkvu1ucrs11yr1rlcs/RecoveryImage/BaseSystem.chunklist",
         "date": datetime.datetime.now() # Always new
