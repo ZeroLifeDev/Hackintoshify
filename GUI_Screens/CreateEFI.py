@@ -1,12 +1,15 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
     QPushButton, QFrame, QComboBox, QScrollArea, 
-    QMessageBox, QLineEdit
+    QMessageBox, QLineEdit, QGroupBox, QFileDialog
 )
 from PySide6.QtGui import QFont, QIcon
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QThread
+from .Functionality.EFIBuilder import EFIBuilderWorker
+from .Functionality.HardwareSniffer import HardwareSniffer
 
 import os
+import sys
 
 class CreateEFIScreen(QWidget):
     efi_selected = Signal(str) # Emits path to the created/selected EFI
@@ -19,156 +22,226 @@ class CreateEFIScreen(QWidget):
         
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
-        
+
         self._build_ui()
         self.apply_theme("Dark")
 
     def _build_ui(self):
-        # --- Header ---
+        # Header
         header = QFrame()
-        header.setObjectName("header")
-        header.setFixedHeight(70)
-        h_layout = QHBoxLayout(header)
-        title = QLabel("EFI Creator")
-        title.setFont(QFont("Segoe UI", 16, QFont.Bold))
-        title.setObjectName("title")
-        close_btn = QPushButton("✕")
-        close_btn.setFixedSize(30, 30)
-        close_btn.clicked.connect(self.close)
-        close_btn.setObjectName("close_btn")
-        
-        h_layout.addWidget(title)
-        h_layout.addStretch()
-        h_layout.addWidget(close_btn)
+        header.setStyleSheet("background-color: #1e293b; border-bottom: 1px solid #334155;")
+        header_layout = QHBoxLayout(header)
+
+        lbl_title = QLabel("Create EFI Folder")
+        lbl_title.setFont(QFont("Segoe UI", 16, QFont.Bold))
+        lbl_title.setStyleSheet("color: white;")
+
+        btn_close = QPushButton("×")
+        btn_close.setFixedSize(30, 30)
+        btn_close.setCursor(Qt.PointingHandCursor)
+        btn_close.clicked.connect(self.close)
+        btn_close.setStyleSheet("background: transparent; color: #94a3b8; font-size: 20px; border: none;")
+
+        header_layout.addWidget(lbl_title)
+        header_layout.addStretch()
+        header_layout.addWidget(btn_close)
+
         self.layout.addWidget(header)
-        
-        # --- Content ---
-        content = QWidget()
+
+        # Content
+        content = QFrame()
         c_layout = QVBoxLayout(content)
-        c_layout.setContentsMargins(40, 40, 40, 40)
         c_layout.setSpacing(20)
-        
-        # Title
-        l1 = QLabel("Configure Your EFI")
-        l1.setFont(QFont("Segoe UI", 20, QFont.Bold))
-        l1.setStyleSheet("background: transparent; border: none;")
-        c_layout.addWidget(l1)
-        
-        # CPU Generation
-        row1 = QHBoxLayout()
-        lbl_cpu = QLabel("CPU Family:")
-        lbl_cpu.setFont(QFont("Segoe UI", 11))
-        lbl_cpu.setStyleSheet("background: transparent; border: none;")
-        self.combo_cpu = QComboBox()
-        self.combo_cpu.addItems([
-            "Select CPU...",
-            "Intel Desktop (Coffee Lake)",
-            "Intel Desktop (Comet Lake)",
-            "Intel Desktop (Kaby Lake)",
-            "Intel Desktop (Skylake)",
-            "Intel Desktop (Haswell)",
-            "Intel Desktop (Ivy Bridge)",
-            "Intel Desktop (Sandy Bridge)",
-            "AMD Ryzen (Zen/Zen2/Zen3)",
-            "Intel Laptop (Ice Lake)",
-            "Intel Laptop (Coffee Lake Plus)",
-            "Intel Laptop (Kaby Lake)",
-        ])
-        self.combo_cpu.setFixedHeight(40)
-        
-        row1.addWidget(lbl_cpu)
-        row1.addWidget(self.combo_cpu, 1)
-        c_layout.addLayout(row1)
+        c_layout.setContentsMargins(30, 30, 30, 30)
+
+        # Hardware Info Section (Display Only)
+        info_group = QGroupBox("Detected Hardware")
+        info_group.setStyleSheet("""
+            QGroupBox {
+                color: #e2e8f0; font-weight: bold; border: 1px solid #334155;
+                border-radius: 8px; margin-top: 10px; padding-top: 15px;
+            }
+            QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px; }
+        """)
+        ig_layout = QVBoxLayout(info_group)
+
+        self.lbl_hw_info = QLabel("Initializing hardware scan...")
+        self.lbl_hw_info.setStyleSheet("color: #94a3b8; font-family: Consolas;")
+        self.lbl_hw_info.setWordWrap(True)
+        ig_layout.addWidget(self.lbl_hw_info)
+
+        c_layout.addWidget(info_group)
+
 
         # Boot Mode (UEFI / Legacy)
         row2 = QHBoxLayout()
         lbl_boot = QLabel("Boot Mode:")
-        lbl_boot.setFont(QFont("Segoe UI", 11))
-        lbl_boot.setStyleSheet("background: transparent; border: none;")
-        
+        lbl_boot.setStyleSheet("color: #e2e8f0; font-weight: bold;")
+
         self.btn_uefi = QPushButton("UEFI (Modern)")
         self.btn_uefi.setCheckable(True)
         self.btn_uefi.setChecked(True)
-        self.btn_uefi.setFixedSize(120, 40)
         self.btn_uefi.setCursor(Qt.PointingHandCursor)
-        self.btn_uefi.clicked.connect(lambda: self.toggle_boot_mode("UEFI"))
-        self.btn_uefi.setStyleSheet(self._get_btn_style(True))
-        
-        self.btn_legacy = QPushButton("Legacy BIOS")
+        self.btn_uefi.clicked.connect(lambda: self._toggle_boot_mode(True))
+
+        self.btn_legacy = QPushButton("Legacy (BIOS)")
         self.btn_legacy.setCheckable(True)
-        self.btn_legacy.setFixedSize(120, 40)
         self.btn_legacy.setCursor(Qt.PointingHandCursor)
-        self.btn_legacy.clicked.connect(lambda: self.toggle_boot_mode("Legacy"))
-        self.btn_legacy.setStyleSheet(self._get_btn_style(False))
-        
+        self.btn_legacy.clicked.connect(lambda: self._toggle_boot_mode(False))
+
+        self._set_btn_style(self.btn_uefi, active=True)
+        self._set_btn_style(self.btn_legacy, active=False)
+
         row2.addWidget(lbl_boot)
         row2.addWidget(self.btn_uefi)
         row2.addWidget(self.btn_legacy)
         row2.addStretch()
         c_layout.addLayout(row2)
-        
-        # Placeholder for more options
-        info = QLabel("This tool will generate a basic OpenCore EFI based on your hardware selection.\n(This is a placeholder for the EFI generation logic)")
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #94a3b8; background: transparent; border: none;")
-        c_layout.addWidget(info)
-        
+
         c_layout.addStretch()
-        
-        # Generate Button
+
+        # Action Buttons
+        row_btns = QHBoxLayout()
+
+        self.lbl_status = QLabel("")
+        self.lbl_status.setStyleSheet("color: #fbbf24;")
+
         self.btn_create = QPushButton("Generate EFI")
-        self.btn_create.setFixedHeight(50)
+        self.btn_create.setFixedSize(180, 50)
         self.btn_create.setCursor(Qt.PointingHandCursor)
-        self.btn_create.setObjectName("btn_primary")
+        self.btn_create.setStyleSheet("""
+            QPushButton {
+                background-color: #3b82f6; color: white; border-radius: 8px; font-weight: bold; font-size: 14px;
+            }
+            QPushButton:hover { background-color: #2563eb; }
+            QPushButton:disabled { background-color: #475569; color: #94a3b8; }
+        """)
         self.btn_create.clicked.connect(self.generate_efi)
-        c_layout.addWidget(self.btn_create)
-        
+
+        row_btns.addWidget(self.lbl_status)
+        row_btns.addStretch()
+        row_btns.addWidget(self.btn_create)
+
+        c_layout.addLayout(row_btns)
         self.layout.addWidget(content)
 
-    def generate_efi(self):
-        # Placeholder logic
-        if self.combo_cpu.currentIndex() == 0:
-            QMessageBox.warning(self, "Selection Required", "Please select your CPU family.")
-            return
+        # Trigger Scan immediately
+        QThread.currentThread().msleep(100)
+        self.scan_hardware()
 
-        # Simulate creation
-        QMessageBox.information(self, "Success", "EFI Folder 'Generated' (Mock).")
+    def generate_efi(self):
+        # Use detected info
+        cpu_family = self.hw_info.get('cpu_family', 'Unknown')
         
-        # In real app, we would create folder. For now, let's just return a dummy path or prompt user to save
-        from PySide6.QtWidgets import QFileDialog
-        path = QFileDialog.getExistingDirectory(self, "Select Output Folder for EFI")
-        if path:
-            final_path = os.path.join(path, "EFI")
-            # Create dummy
-            try:
-                os.makedirs(final_path, exist_ok=True)
-                os.makedirs(os.path.join(final_path, "OC"), exist_ok=True)
-                os.makedirs(os.path.join(final_path, "BOOT"), exist_ok=True)
-            except: pass
+        if cpu_family == 'Unknown':
+            QMessageBox.warning(self, "Detection Failed", "Could not automatically identify CPU generation.\nEFI generation may use generic defaults.")
+        
+        # Check for default path in settings (Setup Details or Config)
+        path = ""
+        try:
+            # 1. Try Setup Details JSON
+            import json
+            if sys.platform == "win32":
+                config_dir = os.path.join(os.getenv("ProgramData"), "Hackintoshify")
+            elif sys.platform == "darwin":
+                config_dir = "/Library/Application Support/Hackintoshify"
+            else:
+                config_dir = os.path.join(os.path.expanduser("~"), ".config", "hackintoshify")
             
-            self.efi_selected.emit(final_path)
+            setup_path = os.path.join(config_dir, "setup_details.json")
+            if os.path.exists(setup_path):
+                with open(setup_path, 'r') as f:
+                    data = json.load(f)
+                    path = data.get("efi_path", "")
+            
+            # 2. Fallback to Config.ini if JSON empty
+            if not path and self.parent() and hasattr(self.parent(), 'config'):
+                path = self.parent().config['Settings'].get('efi_path', '')
+        except: pass
+
+        if not path or not os.path.exists(path):
+            # Fallback to dialog
+            path = QFileDialog.getExistingDirectory(self, "Select Output Directory")
+        
+        if not path: return
+
+        # Lock UI
+        self.btn_create.setEnabled(False)
+        self.btn_create.setText("Building EFI...")
+        self.lbl_status.setText("Initializing...")
+        
+        is_uefi = self.btn_uefi.isChecked()
+        
+        self.worker = EFIBuilderWorker(path, cpu_family, is_uefi)
+        self.worker.progress.connect(self.on_build_progress)
+        self.worker.finished.connect(self.on_build_finished)
+        self.worker.error.connect(self.on_build_error)
+        self.worker.start()
+
+    def on_build_progress(self, pct, msg):
+        self.lbl_status.setText(f"{msg} ({pct}%)")
+
+    def on_build_finished(self, efi_path):
+        self.btn_create.setEnabled(True)
+        self.btn_create.setText("Generate EFI")
+        self.lbl_status.setText("Success!")
+
+        res = QMessageBox.question(self, "Success", f"EFI Folder Created Successfully at:\n{efi_path}\n\nDo you want to manage Kexts (config.plist) now?", QMessageBox.Yes | QMessageBox.No)
+        
+        self.efi_selected.emit(efi_path)
+        
+        if res == QMessageBox.Yes:
+            # Open Kext Manager
+            try:
+                from .EFIManager import EFIManager
+                self.mgr = EFIManager(efi_path)
+                self.mgr.show()
+                self.close() # Close creator
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to open Kext Manager: {e}")
+        else:
             self.close()
 
-    def toggle_boot_mode(self, mode):
-        is_uefi = (mode == "UEFI")
+    def scan_hardware(self):
+        self.lbl_hw_info.setText("Scanning system hardware...")
+        self.sniffer = HardwareSniffer()
+        self.hw_info = self.sniffer.detect()
+
+        info_text = f"""CPU: {self.hw_info.get('cpu_model', 'Unknown')}
+Family: {self.hw_info.get('cpu_family', 'Unknown')}
+GPU: {self.hw_info.get('gpu_model', 'Unknown')}
+Motherboard: {self.hw_info.get('mobo_vendor', '')} {self.hw_info.get('mobo_model', '')}
+Ethernet: {self.hw_info.get('ethernet', 'Unknown')}"""
+
+        self.lbl_hw_info.setText(info_text)
+
+    def on_build_error(self, err):
+        self.btn_create.setEnabled(True)
+        self.btn_create.setText("Generate EFI")
+        self.lbl_status.setText("Error!")
+        QMessageBox.critical(self, "Build Error", f"Failed to build EFI:\n{err}")
+
+    def _toggle_boot_mode(self, is_uefi):
         self.btn_uefi.setChecked(is_uefi)
         self.btn_legacy.setChecked(not is_uefi)
-        self.btn_uefi.setStyleSheet(self._get_btn_style(is_uefi))
-        self.btn_legacy.setStyleSheet(self._get_btn_style(not is_uefi))
+        self._set_btn_style(self.btn_uefi, is_uefi)
+        self._set_btn_style(self.btn_legacy, not is_uefi)
 
-    def _get_btn_style(self, active):
+    def _set_btn_style(self, btn, active):
         # We need colors from theme, but for now hardcode or use simple logic
-        # Ideally we pull from a theme dict
         accent = "#38bdf8"
         bg_active = "rgba(56, 189, 248, 0.2)"
         border_active = accent
         bg_inactive = "transparent"
         border_inactive = "#334155"
         
+        style = ""
         if active:
-            return f"background-color: {bg_active}; border: 1px solid {border_active}; color: {accent}; border-radius: 6px;"
+            style = f"background-color: {bg_active}; border: 1px solid {border_active}; color: {accent}; border-radius: 6px; font-weight: bold;"
         else:
-            return f"background-color: {bg_inactive}; border: 1px solid {border_inactive}; color: #94a3b8; border-radius: 6px;"
+            style = f"background-color: {bg_inactive}; border: 1px solid {border_inactive}; color: #94a3b8; border-radius: 6px;"
+        
+        btn.setStyleSheet(style)
 
     def apply_theme(self, theme_name='Dark'):
         is_dark = theme_name.lower().startswith('dark')
