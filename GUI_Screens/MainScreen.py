@@ -145,8 +145,9 @@ class MainScreen(QWidget):
         
         self._build_ui()
         self.apply_theme(self.current_theme)
-        
+        # Persistent subsystems
         self.download_window = None
+        self.efi_window = None
         
         # State
         self.selected_image = None
@@ -224,7 +225,7 @@ class MainScreen(QWidget):
         self.cards_data = [
             ("Create USB Installer", "Flash the selected macOS image and EFI to a USB drive.", "🚀", self.start_usb_creation),
             ("Select macOS Image", "Download or select a macOS image.", "☁️", self.open_download_manager),
-            ("Select EFI", "Select your OpenCore/Clover EFI folder.", "⚙️", self.select_efi_folder),
+            ("Create EFI Folder", "Generate an OpenCore EFI for your hardware.", "⚙️", self.open_efi_creator),
             ("Help & Guides", "Documentation and troubleshooting steps.", "❓", self.open_help),
         ]
 
@@ -341,12 +342,31 @@ class MainScreen(QWidget):
             self.selected_image = fname
             self._update_card_status("Select Local Image", f"Selected: {os.path.basename(fname)}", success=True)
 
+    def open_efi_creator(self):
+        try:
+            if not self.efi_window:
+                from .CreateEFI import CreateEFIScreen
+                self.efi_window = CreateEFIScreen(parent=self)
+                self.efi_window.apply_theme(self.current_theme)
+                self.efi_window.efi_selected.connect(self.on_efi_created)
+            
+            self.efi_window.show()
+            self.efi_window.raise_()
+            self.efi_window.activateWindow()
+        except Exception as e:
+             QMessageBox.critical(self, "Error", f"Failed to open EFI creator: {e}")
+
+    def on_efi_created(self, path):
+        self.selected_efi = path
+        self._update_card_status("Create EFI Folder", f"Selected: {os.path.basename(path)}", success=True)
+
     def select_efi_folder(self):
+        # Legacy/Fallback if needed, or we can add a 'Select existing' button inside the EFI creator
         from PySide6.QtWidgets import QFileDialog
         dname = QFileDialog.getExistingDirectory(self, "Select EFI Folder")
         if dname:
             self.selected_efi = dname
-            self._update_card_status("Select EFI", f"Selected: {os.path.basename(dname)}", success=True)
+            self._update_card_status("Create EFI Folder", f"Selected: {os.path.basename(dname)}", success=True)
 
     def open_help(self):
         QMessageBox.information(self, "Help", "Opening guides...")

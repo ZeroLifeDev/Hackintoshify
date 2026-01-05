@@ -79,6 +79,33 @@ class CreateEFIScreen(QWidget):
         row1.addWidget(lbl_cpu)
         row1.addWidget(self.combo_cpu, 1)
         c_layout.addLayout(row1)
+
+        # Boot Mode (UEFI / Legacy)
+        row2 = QHBoxLayout()
+        lbl_boot = QLabel("Boot Mode:")
+        lbl_boot.setFont(QFont("Segoe UI", 11))
+        lbl_boot.setStyleSheet("background: transparent; border: none;")
+        
+        self.btn_uefi = QPushButton("UEFI (Modern)")
+        self.btn_uefi.setCheckable(True)
+        self.btn_uefi.setChecked(True)
+        self.btn_uefi.setFixedSize(120, 40)
+        self.btn_uefi.setCursor(Qt.PointingHandCursor)
+        self.btn_uefi.clicked.connect(lambda: self.toggle_boot_mode("UEFI"))
+        self.btn_uefi.setStyleSheet(self._get_btn_style(True))
+        
+        self.btn_legacy = QPushButton("Legacy BIOS")
+        self.btn_legacy.setCheckable(True)
+        self.btn_legacy.setFixedSize(120, 40)
+        self.btn_legacy.setCursor(Qt.PointingHandCursor)
+        self.btn_legacy.clicked.connect(lambda: self.toggle_boot_mode("Legacy"))
+        self.btn_legacy.setStyleSheet(self._get_btn_style(False))
+        
+        row2.addWidget(lbl_boot)
+        row2.addWidget(self.btn_uefi)
+        row2.addWidget(self.btn_legacy)
+        row2.addStretch()
+        c_layout.addLayout(row2)
         
         # Placeholder for more options
         info = QLabel("This tool will generate a basic OpenCore EFI based on your hardware selection.\n(This is a placeholder for the EFI generation logic)")
@@ -121,6 +148,27 @@ class CreateEFIScreen(QWidget):
             
             self.efi_selected.emit(final_path)
             self.close()
+
+    def toggle_boot_mode(self, mode):
+        is_uefi = (mode == "UEFI")
+        self.btn_uefi.setChecked(is_uefi)
+        self.btn_legacy.setChecked(not is_uefi)
+        self.btn_uefi.setStyleSheet(self._get_btn_style(is_uefi))
+        self.btn_legacy.setStyleSheet(self._get_btn_style(not is_uefi))
+
+    def _get_btn_style(self, active):
+        # We need colors from theme, but for now hardcode or use simple logic
+        # Ideally we pull from a theme dict
+        accent = "#38bdf8"
+        bg_active = "rgba(56, 189, 248, 0.2)"
+        border_active = accent
+        bg_inactive = "transparent"
+        border_inactive = "#334155"
+        
+        if active:
+            return f"background-color: {bg_active}; border: 1px solid {border_active}; color: {accent}; border-radius: 6px;"
+        else:
+            return f"background-color: {bg_inactive}; border: 1px solid {border_inactive}; color: #94a3b8; border-radius: 6px;"
 
     def apply_theme(self, theme_name='Dark'):
         is_dark = theme_name.lower().startswith('dark')
