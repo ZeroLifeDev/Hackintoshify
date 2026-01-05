@@ -146,8 +146,11 @@ class MainScreen(QWidget):
         self._build_ui()
         self.apply_theme(self.current_theme)
         
-        # Persistent subsystems
         self.download_window = None
+        
+        # State
+        self.selected_image = None
+        self.selected_efi = None
 
     def closeEvent(self, event):
         # Ensure we save download state if exists
@@ -219,9 +222,9 @@ class MainScreen(QWidget):
         grid.setContentsMargins(0, 10, 0, 10)
         
         self.cards_data = [
-            ("Select macOS Image", "Download or select a macOS image.", "🚀", self.create_installer),
-            ("Select Image (Manual)", "Use a pre-downloaded macOS image file manually.", "💿", self.select_image),
-            ("Create & Select EFI", "Verify and install an existing EFI configuration.", "⚙️", self.select_efi),
+            ("Create USB Installer", "Flash the selected macOS image and EFI to a USB drive.", "🚀", self.start_usb_creation),
+            ("Select macOS Image", "Download or select a macOS image.", "☁️", self.open_download_manager),
+            ("Select EFI", "Select your OpenCore/Clover EFI folder.", "⚙️", self.select_efi_folder),
             ("Help & Guides", "Documentation and troubleshooting steps.", "❓", self.open_help),
         ]
 
@@ -297,8 +300,10 @@ class MainScreen(QWidget):
                 )
 
     # Actions
-    def create_installer(self):
+    # Actions
+    def open_download_manager(self):
         try:
+            if not self.download_window:
                 from .DownloadImage import DownloadImageScreen
                 self.download_window = DownloadImageScreen(parent=self)
                 # Pass current theme
@@ -307,33 +312,53 @@ class MainScreen(QWidget):
                 # Connect Signal
                 self.download_window.image_selected.connect(self.on_image_selected)
             
-            # Show non-modally so user can use other parts of app if desired, 
-            # and so it stays alive when "closed" (hidden)
+            # Show non-modally so user can use other parts of app if desired
             self.download_window.show()
             self.download_window.raise_()
             self.download_window.activateWindow()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to open downloader: {e}")
             
-    def on_image_selected(self, name, path):
-        # Update the first card's description or create a visual indicator
-        # We need to access the card. Since we created them in a loop, we can find it.
-        # But finding by object name is tricky if we didn't set specific ones.
-        # Storing references would be better, but we can iterate.
-        
-        children = self.findChildren(QFrame, "ActionCard")
-        # We know it's the first one logic-wise, or match by title "Select macOS Image"
-        for card in children:
-            if card.title_label.text() == "Select macOS Image":
-                card.desc_label.setText(f"Selected: {name}")
-                card.desc_label.setStyleSheet("color: #22c55e;") # Green
-                break
-    
-    def select_image(self):
-        QMessageBox.information(self, "Select Image", "Opening image selector...")
+    def start_usb_creation(self):
+        if not self.selected_image:
+             QMessageBox.warning(self, "Missing Input", "Please select a macOS Image first (Download or Select Local).")
+             return
+        if not self.selected_efi:
+             QMessageBox.warning(self, "Missing Input", "Please select an EFI folder.")
+             return
+             
+        QMessageBox.information(self, "Ready", f"Ready to create USB!\nImage: {os.path.basename(self.selected_image)}\nEFI: {os.path.basename(self.selected_efi)}")
 
-    def select_efi(self):
-        QMessageBox.information(self, "Select EFI", "Opening EFI selector...")
+    def on_image_selected(self, name, path):
+        self.selected_image = path
+        # Visually update the "Select macOS Image" card
+        self._update_card_status("Select macOS Image", f"Selected: {name}", success=True)
+    
+    def select_local_image(self):
+        from PySide6.QtWidgets import QFileDialog
+        fname, _ = QFileDialog.getOpenFileName(self, "Select macOS Image", "", "Disk Image (*.dmg *.iso *.pkg);;All Files (*)")
+        if fname:
+            self.selected_image = fname
+            self._update_card_status("Select Local Image", f"Selected: {os.path.basename(fname)}", success=True)
+
+    def select_efi_folder(self):
+        from PySide6.QtWidgets import QFileDialog
+        dname = QFileDialog.getExistingDirectory(self, "Select EFI Folder")
+        if dname:
+            self.selected_efi = dname
+            self._update_card_status("Select EFI", f"Selected: {os.path.basename(dname)}", success=True)
+
+    def open_help(self):
+        QMessageBox.information(self, "Help", "Opening guides...")
+
+    def _update_card_status(self, title_key, text, success=False):
+        children = self.findChildren(QFrame, "ActionCard")
+        for card in children:
+            if card.title_label.text() == title_key:
+                card.desc_label.setText(text)
+                if success:
+                    card.desc_label.setStyleSheet("background: transparent; border: none; color: #22c55e;") # Green
+                break
 
     def open_help(self):
         QMessageBox.information(self, "Help", "Opening guides...")
