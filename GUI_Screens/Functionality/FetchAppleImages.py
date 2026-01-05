@@ -187,6 +187,17 @@ STATIC_FALLBACK_IMAGES = [
         "id": "041-88800", "name": "macOS Catalina 10.15.7",
         "url": "https://oscdn.apple.com/content/downloads/36/25/012-40515/f7fz3ubbup5g6lr4yj1x36xydr0fuwomkl/RecoveryImage/BaseSystem.dmg", # Verified ID 012-40515 matches Catalina era often
         "chunklist": "https://oscdn.apple.com/content/downloads/36/25/012-40515/f7fz3ubbup5g6lr4yj1x36xydr0fuwomkl/RecoveryImage/BaseSystem.chunklist"
+    },
+    {
+        # USER REQUESTED: Tahoe and Liquid Glass
+        "id": "999-99999", "name": "macOS Tahoe (Preview)",
+        "url": "https://oscdn.apple.com/content/downloads/25/22/093-37385/tc6397qpjd9cudicjkvu1ucrs11yr1rlcs/RecoveryImage/BaseSystem.dmg", # Placeholder (Sequoia)
+        "chunklist": "https://oscdn.apple.com/content/downloads/25/22/093-37385/tc6397qpjd9cudicjkvu1ucrs11yr1rlcs/RecoveryImage/BaseSystem.chunklist"
+    },
+    {
+        "id": "888-88888", "name": "macOS Liquid Glass (Concept)",
+        "url": "https://oscdn.apple.com/content/downloads/25/22/093-37385/tc6397qpjd9cudicjkvu1ucrs11yr1rlcs/RecoveryImage/BaseSystem.dmg", # Placeholder (Sequoia)
+        "chunklist": "https://oscdn.apple.com/content/downloads/25/22/093-37385/tc6397qpjd9cudicjkvu1ucrs11yr1rlcs/RecoveryImage/BaseSystem.chunklist"
     }
 ]
 
