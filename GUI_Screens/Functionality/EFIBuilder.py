@@ -11,7 +11,8 @@ KEXTS = {
     "Lilu": "https://github.com/acidanthera/Lilu/releases/download/1.6.7/Lilu-1.6.7-RELEASE.zip",
     "VirtualSMC": "https://github.com/acidanthera/VirtualSMC/releases/download/1.3.2/VirtualSMC-1.3.2-RELEASE.zip",
     "WhateverGreen": "https://github.com/acidanthera/WhateverGreen/releases/download/1.6.6/WhateverGreen-1.6.6-RELEASE.zip",
-    "AppleALC": "https://github.com/acidanthera/AppleALC/releases/download/1.8.7/AppleALC-1.8.7-RELEASE.zip"
+    "AppleALC": "https://github.com/acidanthera/AppleALC/releases/download/1.8.7/AppleALC-1.8.7-RELEASE.zip",
+    "VoodooPS2Controller": "https://github.com/acidanthera/VoodooPS2/releases/download/2.3.5/VoodooPS2Controller-2.3.5-RELEASE.zip"
 }
 
 class EFIBuilderWorker(QThread):
@@ -165,13 +166,22 @@ class EFIBuilderWorker(QThread):
             self.error.emit(f"Config Patcher failed: {e}")
 
     def _make_kext_entry(self, kext_name):
-        # Basic entry structure for OC 0.9.x
+        # Verify if executable exists
+        kext_path = os.path.join(self.output_path, "EFI", "OC", "Kexts", kext_name)
+        base_name = kext_name[:-5] # Strip .kext
+        exe_path = f'Contents/MacOS/{base_name}'
+        
+        full_exe = os.path.join(kext_path, "Contents", "MacOS", base_name)
+        
+        if not os.path.exists(full_exe):
+            exe_path = ""
+            
         return {
             'Arch': 'x86_64',
             'BundlePath': kext_name,
             'Comment': '',
             'Enabled': True,
-            'ExecutablePath': f'Contents/MacOS/{kext_name[:-5]}', # Strip .kext
+            'ExecutablePath': exe_path,
             'MaxKernel': '',
             'MinKernel': '',
             'PlistPath': 'Contents/Info.plist'
